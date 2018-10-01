@@ -1,0 +1,2 @@
+# blockman
+simple staking tool
