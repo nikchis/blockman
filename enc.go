@@ -1,22 +1,23 @@
-﻿// Copyright (c) 2018 Nikita Chisnikov
+// Copyright (c) 2018 Nikita Chisnikov
 // Distributed under the MIT/X11 software license
 
 package main
 
 import (
-	"io"
-	"os"
-	"log"
 	"bytes"
-	"strings"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"golang.org/x/crypto/sha3"
-	"golang.org/x/crypto/scrypt"
+	"io"
+	"log"
+	"os"
+	"strings"
+
 	"github.com/shirou/gopsutil/cpu"
+	"golang.org/x/crypto/scrypt"
+	"golang.org/x/crypto/sha3"
 )
 
 const C_DEF_STORAGE_SALT = "s0me.go0d.s@lt"
@@ -42,7 +43,9 @@ func checksum(path string) (string, error) {
 
 func genPwd(phrase string) string {
 	info, err := cpu.Info()
-	if err != nil { log.Fatal("cpu.Info():", err.Error()) }
+	if err != nil {
+		log.Fatal("cpu.Info():", err.Error())
+	}
 	for i := range info {
 		js, err := json.Marshal(info[i])
 		if err != nil {
@@ -55,16 +58,20 @@ func genPwd(phrase string) string {
 	phash := make([]byte, 32)
 	sha3.ShakeSum128(phash, []byte(phrase))
 	result := hex.EncodeToString(phash)
-	phash = nil; phrase = ""
+	phash = nil
+	phrase = ""
 	return result
 }
 
 func genSalt() []byte {
 	res := strings.Join(getMacs(), ":") + C_DEF_STORAGE_SALT
-	if res == "" { log.Panic("generated salt is null!") }
+	if res == "" {
+		log.Panic("generated salt is null!")
+	}
 	salt := make([]byte, 32)
 	sha3.ShakeSum128(salt, []byte(res))
-	salt = nil; res = ""
+	salt = nil
+	res = ""
 	return salt
 }
 
@@ -87,7 +94,9 @@ func encrypt(data []byte, pswd string) []byte {
 		log.Fatal("io.ReadFull():", err.Error())
 	}
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	nonce = nil; block = nil; gcm = nil
+	nonce = nil
+	block = nil
+	gcm = nil
 	return ciphertext
 }
 
@@ -103,7 +112,9 @@ func decrypt(data []byte, pswd string) ([]byte, error) {
 	nonceSize := gcm.NonceSize()
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	nonce = nil; block = nil; gcm = nil
+	nonce = nil
+	block = nil
+	gcm = nil
 	if err != nil {
 		log.Println(err.Error())
 		return nil, err

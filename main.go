@@ -1,34 +1,34 @@
-﻿// Copyright (c) 2018 Nikita Chisnikov
+// Copyright (c) 2018 Nikita Chisnikov
 // Distributed under the MIT/X11 software license
 
 package main
 
 import (
-	"io"
-	"log"
-	"flag"
-	"time"
 	"bytes"
-	"io/ioutil"
-	"os/exec"
 	"encoding/json"
+	"flag"
+	"io"
+	"io/ioutil"
+	"log"
+	"os/exec"
 	"runtime/debug"
+	"time"
 )
 
 type BlockInfo struct {
-	Path	string		`json:"path" binding:"required"`
-	Cli	*CoreFile	`json:"cli" binding:"required"`
-	Daemon	*CoreFile	`json:"daemon" binding:"required"`
-	Wpass	string		`json:"wpass" binding:"required"`
+	Path   string    `json:"path" binding:"required"`
+	Cli    *CoreFile `json:"cli" binding:"required"`
+	Daemon *CoreFile `json:"daemon" binding:"required"`
+	Wpass  string    `json:"wpass" binding:"required"`
 }
 
 type CoreFile struct {
-	Name	string		`json:"name" binding:"required"`
-	Chsum	string		`json:"chsum" binding:"required"`
+	Name  string `json:"name" binding:"required"`
+	Chsum string `json:"chsum" binding:"required"`
 }
 
-const C_CLI_FNAME =	"blocknetdx-cli"
-const C_DAEMON_FNAME =	"blocknetdxd"
+const C_CLI_FNAME = "blocknet-cli"
+const C_DAEMON_FNAME = "blocknetd"
 
 func saveInfo(path, wpwd, spwd string) {
 	var bi, bi_old *BlockInfo
@@ -38,24 +38,36 @@ func saveInfo(path, wpwd, spwd string) {
 	bi_old = loadInfo(spwd)
 	if path != "" {
 		log.Println("checking blocknet core files..")
-		if bi = handlePath(path, C_CLI_FNAME, C_DAEMON_FNAME); bi == nil { return }
+		if bi = handlePath(path, C_CLI_FNAME, C_DAEMON_FNAME); bi == nil {
+			return
+		}
 		log.Println("blocknet path:", bi.Path)
 		log.Println(bi.Cli.Name, "checksum done!")
 		log.Println(bi.Daemon.Name, "checksum done!")
-	} else { bi = bi_old }
+	} else {
+		bi = bi_old
+	}
 	if wpwd != "" {
-		if bi == nil { bi = &BlockInfo{} }
+		if bi == nil {
+			bi = &BlockInfo{}
+		}
 		bi.Wpass = wpwd
 	} else {
-		if bi_old != nil { bi.Wpass = bi_old.Wpass }
+		if bi_old != nil {
+			bi.Wpass = bi_old.Wpass
+		}
 	}
 	js, err = json.Marshal(bi)
-	bi = nil; bi_old = nil
+	bi = nil
+	bi_old = nil
 	if err != nil {
 		log.Fatal("json.Marshal()", err.Error())
 	}
 	log.Println("setting data to storage..")
-	if err = setData(getMyPath() + "/blockman.dat", string(encrypt(js, genPwd(spwd)))); err != nil { return }
+	if err = setData(getMyPath()+"/blockman.dat",
+		string(encrypt(js, genPwd(spwd)))); err != nil {
+		return
+	}
 	js = nil
 	log.Println("done!")
 }
@@ -67,10 +79,15 @@ func loadInfo(spwd string) *BlockInfo {
 	var btdata []byte
 	log.Println("getting data from storage..")
 	data, err = getData(getMyPath() + "/blockman.dat")
-	if err != nil { return nil }
+	if err != nil {
+		return nil
+	}
 	bi = &BlockInfo{}
 	btdata, err = decrypt([]byte(data), genPwd(spwd))
-	if err != nil { bi = nil; return nil }
+	if err != nil {
+		bi = nil
+		return nil
+	}
 	if err = json.Unmarshal(btdata, bi); err != nil {
 		log.Fatal("json.Unmarshal():", err.Error())
 		bi = nil
@@ -97,7 +114,7 @@ func printInfo(bi BlockInfo) {
 	if err != nil {
 		log.Fatal("json.Marshal()", err.Error())
 	}
-	log.Println("\n"+string(js))
+	log.Println("\n" + string(js))
 }
 
 func getStatus(bi *BlockInfo) (bexec, bstake bool) {
@@ -112,7 +129,7 @@ func getStatus(bi *BlockInfo) (bexec, bstake bool) {
 		return false, false
 	}
 	log.Println("checking the status..")
-	cmd = exec.Command(bi.Path + bi.Cli.Name, "getstakingstatus")
+	cmd = exec.Command(bi.Path+bi.Cli.Name, "getstakingstatus")
 	stdout, err = cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal("cmd.StdoutPipe():", err.Error())
@@ -124,7 +141,8 @@ func getStatus(bi *BlockInfo) (bexec, bstake bool) {
 	if err = cmd.Start(); err != nil {
 		log.Fatal("cmd.Start():", err.Error())
 	}
-	bterr, err = ioutil.ReadAll(stderr); if err != nil {
+	bterr, err = ioutil.ReadAll(stderr)
+	if err != nil {
 		log.Fatal("ioutil.ReadAll():", err.Error())
 	}
 	if len(bterr) == 0 {
@@ -157,7 +175,7 @@ func recoverDaemon(bi *BlockInfo) (result bool) {
 		return false
 	}
 	log.Println("initiate recover..")
-	cmd = exec.Command(bi.Path + bi.Daemon.Name, "-daemon")
+	cmd = exec.Command(bi.Path+bi.Daemon.Name, "-daemon")
 	err = cmd.Start()
 	if err != nil {
 		log.Fatal("cmdDaemon.Start():", err.Error())
@@ -187,7 +205,7 @@ func unlockWallet(bi *BlockInfo) (result bool) {
 		return false
 	}
 	log.Println("trying to unlock the wallet..")
-	cmd = exec.Command(bi.Path + bi.Cli.Name, "walletpassphrase", bi.Wpass, "63072000", "true")
+	cmd = exec.Command(bi.Path+bi.Cli.Name, "walletpassphrase", bi.Wpass, "63072000", "true")
 	stdout, err = cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal("cmd.StdoutPipe():", err.Error())
@@ -199,11 +217,13 @@ func unlockWallet(bi *BlockInfo) (result bool) {
 	if err = cmd.Start(); err != nil {
 		log.Fatal("cmd.Start():", err.Error())
 	}
-	bterr, err = ioutil.ReadAll(stderr); if err != nil {
+	bterr, err = ioutil.ReadAll(stderr)
+	if err != nil {
 		log.Fatal("ioutil.ReadAll():", err.Error())
 	}
 	if len(bterr) == 0 {
-		_, err = ioutil.ReadAll(stdout); if err != nil {
+		_, err = ioutil.ReadAll(stdout)
+		if err != nil {
 			log.Fatal("ioutil.ReadAll():", err.Error())
 		}
 		log.Println("wallet unlocked!")
@@ -214,7 +234,9 @@ func unlockWallet(bi *BlockInfo) (result bool) {
 			log.Println("json.NewDecoder():", err.Error())
 		} else {
 			log.Println(uer.Message)
-			if uer.Code == -17 { result = true }
+			if uer.Code == -17 {
+				result = true
+			}
 		}
 		uer = nil
 	}
@@ -230,36 +252,44 @@ func main() {
 	var bi *BlockInfo
 	var err error
 	var executed, staking bool
-
-	pathPtr := flag.String("path", "", "set path to " + C_CLI_FNAME + ", " + C_DAEMON_FNAME)
+	pathPtr := flag.String("path", "", "set path to "+C_CLI_FNAME+", "+C_DAEMON_FNAME)
 	wpwdPtr := flag.String("wpwd", "", "set blocknet wallet passphrase")
-	spwdPtr := flag.String("spwd", "", "set additional storage passphrase (if set, must use it to execute too)")
+	spwdPtr := flag.String("spwd", "", "set additional storage passphrase "+
+		"(if set, must use it to execute too)")
 	prntPtr := flag.Bool("print", false, "print data from storage")
 	estkPtr := flag.Bool("estake", false, "execute staking with daemon recovering")
 	flag.Parse()
-
 	if *pathPtr != "" || *wpwdPtr != "" {
 		saveInfo(*pathPtr, *wpwdPtr, *spwdPtr)
 		debug.FreeOSMemory()
 	}
 	if *prntPtr {
-		if bi = loadInfo(*spwdPtr); bi == nil { return }
-                printInfo(*bi)
+		if bi = loadInfo(*spwdPtr); bi == nil {
+			return
+		}
+		printInfo(*bi)
 		bi = nil
 		debug.FreeOSMemory()
 	}
 	if *estkPtr {
 		for {
-			if bi = loadInfo(*spwdPtr); bi == nil { return }
-
-		        if err = checkCliFile(bi); err != nil { return }
-		        executed, staking = getStatus(bi)
+			if bi = loadInfo(*spwdPtr); bi == nil {
+				return
+			}
+			if err = checkCliFile(bi); err != nil {
+				return
+			}
+			executed, staking = getStatus(bi)
 			if !executed {
-			        if err = checkDaemonFile(bi); err != nil { return }
+				if err = checkDaemonFile(bi); err != nil {
+					return
+				}
 				executed = recoverDaemon(bi)
 			}
 			if !staking {
-			        if err = checkCliFile(bi); err != nil { return }
+				if err = checkCliFile(bi); err != nil {
+					return
+				}
 				staking = unlockWallet(bi)
 			}
 			bi = nil

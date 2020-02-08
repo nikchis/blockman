@@ -1,12 +1,13 @@
-﻿// Copyright (c) 2018 Nikita Chisnikov
+// Copyright (c) 2018 Nikita Chisnikov
 // Distributed under the MIT/X11 software license
 
 package main
 
 import (
+	"errors"
 	"log"
 	"time"
-	"errors"
+
 	"github.com/boltdb/bolt"
 )
 
@@ -35,7 +36,9 @@ func setData(dbFile, data string) error {
 }
 
 func getData(dbFile string) (sres string, err error) {
-	if (dbFile == "") { return sres, errors.New("empty path") }
+	if dbFile == "" {
+		return sres, errors.New("empty path")
+	}
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 3 * time.Second})
 	if err != nil {
 		log.Println("db.Open():", err.Error())
@@ -45,7 +48,7 @@ func getData(dbFile string) (sres string, err error) {
 	var res []byte
 	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("block"))
-		if b == nil { 
+		if b == nil {
 			return errors.New("bucket is nil")
 		}
 		res = b.Get([]byte("data"))

@@ -1,11 +1,11 @@
-﻿// Copyright (c) 2018 Nikita Chisnikov
+// Copyright (c) 2018 Nikita Chisnikov
 // Distributed under the MIT/X11 software license
 
 package main
 
 import (
-	"os"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 )
@@ -13,14 +13,16 @@ import (
 func getMyPath() string {
 	ex, err := os.Executable()
 	if err != nil {
-		log.Fatal("getMyPath():",err.Error())
+		log.Fatal("getMyPath():", err.Error())
 	}
 	exPath := filepath.Dir(ex)
 	return exPath
 }
 
 func handlePath(path, cfname, dfname string) *BlockInfo {
-	if (path == "") { return nil }
+	if path == "" {
+		return nil
+	}
 	path, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal("filepath.Abs():", err.Error())
@@ -42,8 +44,8 @@ func handlePath(path, cfname, dfname string) *BlockInfo {
 	if err != nil {
 		log.Fatal("checksum("+cfname+"):", err.Error())
 	}
-	return &BlockInfo{Path:path, Cli:&CoreFile{Name:cfname, Chsum:chsumC,},
-		Daemon:&CoreFile{Name:dfname, Chsum:chsumD},}
+	return &BlockInfo{Path: path, Cli: &CoreFile{Name: cfname, Chsum: chsumC},
+		Daemon: &CoreFile{Name: dfname, Chsum: chsumD}}
 }
 
 func checkDaemonFile(bi *BlockInfo) error {

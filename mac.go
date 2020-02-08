@@ -1,12 +1,12 @@
-﻿// Copyright (c) 2018 Nikita Chisnikov
+// Copyright (c) 2018 Nikita Chisnikov
 // Distributed under the MIT/X11 software license
 
 package main
 
 import (
+	"bytes"
 	"log"
 	"net"
-	"bytes"
 )
 
 func getMacs() (macs []string) {
@@ -16,7 +16,7 @@ func getMacs() (macs []string) {
 		return macs
 	}
 	for i := range ifcs {
-		if (ifcs[i].Flags&net.FlagUp==0)||(bytes.Compare(ifcs[i].HardwareAddr, nil)==0) {
+		if (ifcs[i].Flags&net.FlagUp == 0) || (bytes.Compare(ifcs[i].HardwareAddr, nil) == 0) {
 			continue
 		}
 		macs = append(macs, ifcs[i].HardwareAddr.String())
